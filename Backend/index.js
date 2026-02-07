@@ -10,10 +10,10 @@ dotenv.config()
 const app = express()
 
 const lineConfig = {
-  // 🔥 แก้: ใช้ชื่อ ENV ให้ตรง
-  CHANNEL_SECRET: process.env.CHANNEL_SECRET,
-  CHANNEL_ACCESS_TOKEN: process.env.CHANNEL_ACCESS_TOKEN
+  channelSecret: process.env.CHANNEL_SECRET,
+  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN
 }
+
 
 const client = new Client(lineConfig)
 
