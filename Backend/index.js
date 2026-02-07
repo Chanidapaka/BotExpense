@@ -41,11 +41,17 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
     }
 
     const now = new Date()
-    const date = now.toLocaleDateString("th-TH")
-    const time = now.toLocaleTimeString("th-TH", {
-      hour: "2-digit",
-      minute: "2-digit"
-    })
+
+const date = now.toLocaleDateString("th-TH", {
+  timeZone: "Asia/Bangkok"
+})
+
+const time = now.toLocaleTimeString("th-TH", {
+  timeZone: "Asia/Bangkok",
+  hour: "2-digit",
+  minute: "2-digit"
+})
+
 
     // 🔥 แก้: บันทึก Google Sheet
     addExpense({ date, time, item, price })
