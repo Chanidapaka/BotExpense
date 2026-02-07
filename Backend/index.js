@@ -1,8 +1,11 @@
 import express from "express"
 import dotenv from "dotenv"
 import { middleware, Client } from "@line/bot-sdk"
-
-import { addExpense, getTodayTotal } from "./expenseStore.js"
+import {
+  addExpense,
+  getTodayTotal,
+  deleteLastExpense
+} from "./expenseStore.js"
 
 dotenv.config()
 
@@ -12,7 +15,6 @@ const lineConfig = {
   channelSecret: process.env.CHANNEL_SECRET,
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN
 }
-
 
 const client = new Client(lineConfig)
 
@@ -26,6 +28,43 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
     }
 
     const text = event.message.text.trim()
+
+    // ===============================
+    // 🔴 คำสั่งลบล่าสุด
+    // ===============================
+    if (text === "ลบล่าสุด") {
+      const now = new Date()
+      const date = now.toLocaleDateString("th-TH", {
+        timeZone: "Asia/Bangkok"
+      })
+
+      const removed = deleteLastExpense(date)
+
+      if (!removed) {
+        await client.replyMessage(event.replyToken, {
+          type: "text",
+          text: "❌ วันนี้ยังไม่มีรายการให้ลบ"
+        })
+        return res.status(200).end()
+      }
+
+      const total = getTodayTotal(date)
+
+      await client.replyMessage(event.replyToken, {
+        type: "text",
+        text:
+`🗑 ลบรายการล่าสุดแล้ว
+🍽 รายการ: ${removed.item}
+💸 ราคา: ${removed.price} บาท
+📊 รวมวันนี้: ${total} บาท`
+      })
+
+      return res.status(200).end()
+    }
+
+    // ===============================
+    // 🟢 เพิ่มค่าใช้จ่าย
+    // ===============================
 
     // parse: "ข้าวหมูกรอบ 60"
     const parts = text.split(" ")
@@ -42,24 +81,23 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
 
     const now = new Date()
 
-const date = now.toLocaleDateString("th-TH", {
-  timeZone: "Asia/Bangkok"
-})
+    const date = now.toLocaleDateString("th-TH", {
+      timeZone: "Asia/Bangkok"
+    })
 
-const time = now.toLocaleTimeString("th-TH", {
-  timeZone: "Asia/Bangkok",
-  hour: "2-digit",
-  minute: "2-digit"
-})
+    const time = now.toLocaleTimeString("th-TH", {
+      timeZone: "Asia/Bangkok",
+      hour: "2-digit",
+      minute: "2-digit"
+    })
 
-
-    // 🔥 แก้: บันทึก Google Sheet
+    // บันทึกลง JSON
     addExpense({ date, time, item, price })
 
-    // 🔥 แก้: รวมยอดวันนี้
-    const todayTotal = await getTodayTotal(date)
+    // รวมยอดวันนี้
+    const todayTotal = getTodayTotal(date)
 
-    // 🔥 แก้: reply ใหม่ มีรวมวันนี้
+    // ตอบกลับ LINE
     await client.replyMessage(event.replyToken, {
       type: "text",
       text:
@@ -82,7 +120,6 @@ app.get("/", (req, res) => {
   res.send("LINE Bot is running 🚀")
 })
 
-// 🔥 แก้: ใช้ PORT จาก Render
 const PORT = process.env.PORT || 10000
 app.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT)

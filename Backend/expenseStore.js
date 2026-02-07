@@ -27,3 +27,22 @@ export function getTodayTotal(date) {
     .filter(e => e.date === date)
     .reduce((sum, e) => sum + e.price, 0)
 }
+
+export function deleteLastExpense(date) {
+  const data = readData()
+
+  // หา index ล่าสุดของวันนี้
+  const index = [...data]
+    .reverse()
+    .findIndex(e => e.date === date)
+
+  if (index === -1) return null
+
+  // คำนวณ index จริง
+  const realIndex = data.length - 1 - index
+  const removed = data.splice(realIndex, 1)[0]
+
+  writeData(data)
+  return removed
+}
+
