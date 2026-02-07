@@ -2,8 +2,7 @@ import express from "express"
 import dotenv from "dotenv"
 import { middleware, Client } from "@line/bot-sdk"
 
-// 🔥 แก้: import เพิ่ม getTodayTotal
-import { appendToSheet, getTodayTotal } from "./googleSheet.js"
+import { addExpense, getTodayTotal } from "./expenseStore.js"
 
 dotenv.config()
 
@@ -49,7 +48,7 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
     })
 
     // 🔥 แก้: บันทึก Google Sheet
-    await appendToSheet({ date, time, item, price })
+    addExpense({ date, time, item, price })
 
     // 🔥 แก้: รวมยอดวันนี้
     const todayTotal = await getTodayTotal(date)
