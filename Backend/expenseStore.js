@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 
-const dataPath = path.resolve("Backend/data/expense.json")
+const dataPath = path.resolve("data/expense.json")
 
 function readData() {
   if (!fs.existsSync(dataPath)) {
