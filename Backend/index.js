@@ -1,74 +1,76 @@
-import dotenv from "dotenv";
-dotenv.config(); // 🔥 ต้องอยู่บนสุด
+import express from "express"
+import dotenv from "dotenv"
+import { middleware, Client } from "@line/bot-sdk"
+import { appendToSheet } from "./googlesheet.js"
 
-import express from "express";
-import * as line from "@line/bot-sdk";
-import { saveExpense } from "./googleSheet.js";
+dotenv.config()
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const app = express()
 
-const config = {
-  channelSecret: process.env.CHANNEL_SECRET,
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-};
-
-const client = new line.Client(config);
-
-// ===== WEBHOOK =====
-app.post("/webhook", line.middleware(config), async (req, res) => {
-  console.log("📩 Webhook received");
-
-  try {
-    await Promise.all(req.body.events.map(handleEvent));
-    res.status(200).end();
-  } catch (err) {
-    console.error("❌ Webhook error:", err);
-    res.status(500).end();
-  }
-});
-
-// ===== HANDLE MESSAGE =====
-async function handleEvent(event) {
-  console.log("👉 Event:", event);
-
-  if (event.type !== "message" || event.message.type !== "text") {
-    return null;
-  }
-
-  const text = event.message.text.trim();
-  const parts = text.split(" ");
-
-  if (parts.length !== 2 || isNaN(parts[1])) {
-    return client.replyMessage(event.replyToken, {
-      type: "text",
-      text: "❌ กรุณาพิมพ์รูปแบบ\nข้าว 50",
-    });
-  }
-
-  const item = parts[0];
-  const price = Number(parts[1]);
-
-  const { date, time } = await saveExpense(item, price);
-
-  const replyText = `
-📅 วันที่: ${date}
-⏰ เวลา: ${time}
-🍽 รายการ: ${item}
-💸 ราคา: ${price} บาท
-`.trim();
-
-  return client.replyMessage(event.replyToken, {
-    type: "text",
-    text: replyText,
-  });
+const lineConfig = {
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
 }
 
-// ===== HEALTH CHECK =====
-app.get("/", (req, res) => {
-  res.send("LINE Expense Bot is running ✅");
-});
+const client = new Client(lineConfig)
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// webhook
+app.post("/webhook", middleware(lineConfig), async (req, res) => {
+  try {
+    const event = req.body.events[0]
+
+    if (event.type !== "message" || event.message.type !== "text") {
+      return res.status(200).end()
+    }
+
+    const text = event.message.text.trim()
+    console.log("📩 text:", text)
+
+    // parse: "ข้าวหมูกรอบ 60"
+    const parts = text.split(" ")
+    const price = Number(parts[parts.length - 1])
+    const item = parts.slice(0, -1).join(" ")
+
+    if (!item || isNaN(price)) {
+      await client.replyMessage(event.replyToken, {
+        type: "text",
+        text: "❌ รูปแบบไม่ถูกต้อง\nตัวอย่าง: ข้าวหมูกรอบ 60"
+      })
+      return res.status(200).end()
+    }
+
+    const now = new Date()
+    const date = now.toLocaleDateString("th-TH")
+    const time = now.toLocaleTimeString("th-TH", {
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+
+    // save to google sheet
+    await appendToSheet({ date, time, item, price })
+    console.log("✅ saved to google sheet")
+
+    // reply LINE
+    await client.replyMessage(event.replyToken, {
+      type: "text",
+      text:
+`📅 วันที่: ${date}
+⏰ เวลา: ${time}
+🍽 รายการ: ${item}
+💸 ราคา: ${price} บาท`
+    })
+
+    res.status(200).end()
+  } catch (err) {
+    console.error("❌ webhook error:", err)
+    res.status(500).end()
+  }
+})
+
+app.get("/", (req, res) => {
+  res.send("LINE Bot is running")
+})
+
+app.listen(10000, () => {
+  console.log("🚀 Server running on port 10000")
+})
