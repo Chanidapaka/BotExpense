@@ -73,21 +73,14 @@ async function saveExpense(item, price) {
     sheet.addRow(["Date", "Time", "Item", "Price"]);
   }
 
-  const now = new Date();
+  const nowUTC = new Date();
+  const nowTH = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000);
 
-  const date = now.toLocaleDateString("th-TH", {
-    timeZone: "Asia/Bangkok",
-  });
-
-  const time = now.toLocaleTimeString("th-TH", {
-    timeZone: "Asia/Bangkok",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const date = nowTH.toLocaleDateString("th-TH");
+  const time = nowTH.toTimeString().slice(0, 5);
 
   sheet.addRow([date, time, item, price]);
 
-  // คำนวณยอดรวมวันนี้
   let total = 0;
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
@@ -97,7 +90,6 @@ async function saveExpense(item, price) {
   });
 
   await workbook.xlsx.writeFile(filePath);
-
   return { date, time, total };
 }
 
