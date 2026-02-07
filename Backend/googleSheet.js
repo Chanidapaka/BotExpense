@@ -42,6 +42,9 @@ export async function getTodayTotal(date) {
       total += price;
     }
   }
+console.log("EMAIL:", process.env.GOOGLE_CLIENT_EMAIL);
+console.log("KEY START:", process.env.GOOGLE_PRIVATE_KEY?.slice(0, 30));
 
   return total;
+  
 }
