@@ -6,6 +6,8 @@ import { saveExpense } from "./googleSheet.js";
 dotenv.config();
 
 const app = express();
+app.use(express.json()); // ⭐ สำคัญมาก
+
 const PORT = process.env.PORT || 3000;
 
 const config = {
@@ -16,20 +18,19 @@ const config = {
 const client = new line.Client(config);
 
 app.post("/webhook", line.middleware(config), async (req, res) => {
+  console.log("📩 Webhook received:", JSON.stringify(req.body));
   await Promise.all(req.body.events.map(handleEvent));
   res.status(200).end();
 });
 
-/* ===== HANDLE MESSAGE ===== */
 async function handleEvent(event) {
   if (event.type !== "message" || event.message.type !== "text") {
     return null;
   }
 
   const text = event.message.text.trim();
-
-  // รูปแบบ: ข้าว 50
   const parts = text.split(" ");
+
   if (parts.length !== 2 || isNaN(parts[1])) {
     return client.replyMessage(event.replyToken, {
       type: "text",
@@ -40,19 +41,11 @@ async function handleEvent(event) {
   const item = parts[0];
   const price = Number(parts[1]);
 
-  // ✅ ตรงนี้แหละที่ถูก
   const { date, time } = await saveExpense(item, price);
-
-  const replyText = `
-📅 วันที่: ${date}
-⏰ เวลา: ${time}
-🍽 รายการ: ${item}
-💸 ราคา: ${price} บาท
-  `.trim();
 
   return client.replyMessage(event.replyToken, {
     type: "text",
-    text: replyText,
+    text: `📅 วันที่: ${date}\n⏰ เวลา: ${time}\n🍽 รายการ: ${item}\n💸 ราคา: ${price} บาท`,
   });
 }
 
