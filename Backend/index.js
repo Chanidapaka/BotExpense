@@ -1,7 +1,7 @@
 import express from "express"
 import dotenv from "dotenv"
 import { middleware, Client } from "@line/bot-sdk"
-import { appendToSheet } from "./googlesheet.js"
+import { appendToSheet } from "./googleSheet.js"
 
 dotenv.config()
 
