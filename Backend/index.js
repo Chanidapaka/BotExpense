@@ -1,15 +1,18 @@
 import express from "express"
 import dotenv from "dotenv"
 import { middleware, Client } from "@line/bot-sdk"
-import { appendToSheet } from "./googleSheet.js"
+
+// 🔥 แก้: import เพิ่ม getTodayTotal
+import { appendToSheet, getTodayTotal } from "./googleSheet.js"
 
 dotenv.config()
 
 const app = express()
 
 const lineConfig = {
-  channelSecret: process.env.LINE_CHANNEL_SECRET,
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
+  // 🔥 แก้: ใช้ชื่อ ENV ให้ตรง
+  CHANNEL_SECRET: process.env.CHANNEL_SECRET,
+  CHANNEL_ACCESS_TOKEN: process.env.CHANNEL_ACCESS_TOKEN
 }
 
 const client = new Client(lineConfig)
@@ -24,7 +27,6 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
     }
 
     const text = event.message.text.trim()
-    console.log("📩 text:", text)
 
     // parse: "ข้าวหมูกรอบ 60"
     const parts = text.split(" ")
@@ -46,18 +48,21 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
       minute: "2-digit"
     })
 
-    // save to google sheet
+    // 🔥 แก้: บันทึก Google Sheet
     await appendToSheet({ date, time, item, price })
-    console.log("✅ saved to google sheet")
 
-    // reply LINE
+    // 🔥 แก้: รวมยอดวันนี้
+    const todayTotal = await getTodayTotal(date)
+
+    // 🔥 แก้: reply ใหม่ มีรวมวันนี้
     await client.replyMessage(event.replyToken, {
       type: "text",
       text:
 `📅 วันที่: ${date}
 ⏰ เวลา: ${time}
 🍽 รายการ: ${item}
-💸 ราคา: ${price} บาท`
+💸 ราคา: ${price} บาท
+📊 รวมวันนี้: ${todayTotal} บาท`
     })
 
     res.status(200).end()
@@ -67,12 +72,13 @@ app.post("/webhook", middleware(lineConfig), async (req, res) => {
   }
 })
 
+// health check
 app.get("/", (req, res) => {
-  res.send("LINE Bot is running")
+  res.send("LINE Bot is running 🚀")
 })
 
+// 🔥 แก้: ใช้ PORT จาก Render
 const PORT = process.env.PORT || 10000
 app.listen(PORT, () => {
   console.log("🚀 Server running on port", PORT)
 })
-
