@@ -1,4 +1,5 @@
 import { google } from "googleapis"
+import { appendToSheet } from "./googleSheet.js"
 
 const auth = new google.auth.JWT(
   process.env.GOOGLE_CLIENT_EMAIL,
