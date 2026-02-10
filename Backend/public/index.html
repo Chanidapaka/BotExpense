@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>Expense App</title>
+
+  <style>
+    body {
+      font-family: system-ui;
+      background: #f4f6f8;
+      max-width: 420px;
+      margin: auto;
+      padding: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      margin-top: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button.delete {
+      background: #ef4444;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+    }
+
+    h2, h3 {
+      margin: 0 0 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>💸 บันทึกค่าใช้จ่าย</h2>
+  <div id="datetime"></div>
+
+  <input id="text" placeholder="เช่น แป๊บซี่ 25" />
+
+  <select id="category">
+    <option value="🍽 อาหาร">🍽 อาหาร</option>
+    <option value="🥤 เครื่องดื่ม">🥤 เครื่องดื่ม</option>
+    <option value="🚗 เดินทาง">🚗 เดินทาง</option>
+    <option value="🛒 ของใช้">🛒 ของใช้</option>
+
+    <!-- ✅ อื่นๆ พร้อมอีโมจิ -->
+    <option value="📦 อื่นๆ">📦 อื่นๆ</option>
+  </select>
+
+  <button onclick="add()">➕ เพิ่ม</button>
+  <button class="delete" onclick="del()">🗑 ลบล่าสุด</button>
+</div>
+
+<div class="card">
+  <h3 id="total">📊 รวมวันนี้: 0 บาท</h3>
+  <ul id="list"></ul>
+</div>
+
+<script>
+const textEl = document.getElementById("text")
+const categoryEl = document.getElementById("category")
+const listEl = document.getElementById("list")
+const totalEl = document.getElementById("total")
+const datetimeEl = document.getElementById("datetime")
+
+async function add() {
+  await fetch("/api/add-text", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: textEl.value,
+      category: categoryEl.value
+    })
+  })
+
+  textEl.value = ""
+  load()
+}
+
+async function del() {
+  await fetch("/api/delete-last", { method: "DELETE" })
+  load()
+}
+
+async function load() {
+  const list = await fetch("/api/today").then(r => r.json())
+  const total = await fetch("/api/total").then(r => r.json())
+
+  listEl.innerHTML = ""
+  list.forEach(e => {
+    listEl.innerHTML += `
+      <li>
+        📅 ${e.date} ⏰ ${e.time}<br>
+        ${e.category}<br>
+        🍽 ${e.item} — 💸 ${e.price} บาท
+      </li>
+    `
+  })
+
+  totalEl.innerText = `📊 รวมวันนี้: ${total.total} บาท`
+}
+
+async function loadTime() {
+  const now = await fetch("/api/now").then(r => r.json())
+  datetimeEl.innerText = `📅 ${now.date} ⏰ ${now.time}`
+}
+
+load()
+loadTime()
+setInterval(loadTime, 1000)
+</script>
+
+</body>
+</html>
